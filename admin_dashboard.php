@@ -6,9 +6,16 @@ if (!isset($_SESSION["admin"])) {
 }
 
 require_once "database.php";
-$sql = "SELECT * FROM users ORDER BY severity ASC";
-$result = mysqli_query($conn, $sql);
-$patients = mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+// Fetch pending patients
+$sql_pending = "SELECT * FROM users WHERE status = 'pending' ORDER BY severity ASC";
+$result_pending = mysqli_query($conn, $sql_pending);
+$pending_patients = mysqli_fetch_all($result_pending, MYSQLI_ASSOC);
+
+// Fetch ready patients
+$sql_ready = "SELECT * FROM users WHERE status = 'ready' ORDER BY severity ASC";
+$result_ready = mysqli_query($conn, $sql_ready);
+$ready_patients = mysqli_fetch_all($result_ready, MYSQLI_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -25,7 +32,7 @@ $patients = mysqli_fetch_all($result, MYSQLI_ASSOC);
         <h1>Hospital Triage System - Admin Dashboard</h1>
     </header>
     <main class="container mt-5">
-        <h2>Patient List</h2>
+        <h2>Pending Patients</h2>
         <table class="table table-bordered">
             <thead>
                 <tr>
@@ -37,23 +44,42 @@ $patients = mysqli_fetch_all($result, MYSQLI_ASSOC);
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($patients as $patient): ?>
+                <?php foreach ($pending_patients as $patient): ?>
                 <tr>
                     <td><?php echo htmlspecialchars($patient['full_name']); ?></td>
                     <td><?php echo htmlspecialchars($patient['email']); ?></td>
                     <td><?php echo htmlspecialchars($patient['severity']); ?></td>
                     <td id="status-<?php echo $patient['id']; ?>"><?php echo htmlspecialchars($patient['status']); ?></td>
                     <td>
-                        <?php if ($patient['status'] === 'pending'): ?>
                         <button class="btn btn-success change-status-btn" data-id="<?php echo $patient['id']; ?>">Mark as Ready</button>
-                        <?php else: ?>
-                        <span class="badge badge-success">Ready</span>
-                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
+
+        <h2>Ready Patients</h2>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Severity</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($ready_patients as $patient): ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($patient['full_name']); ?></td>
+                    <td><?php echo htmlspecialchars($patient['email']); ?></td>
+                    <td><?php echo htmlspecialchars($patient['severity']); ?></td>
+                    <td><?php echo htmlspecialchars($patient['status']); ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+
         <a href="logout.php" class="btn btn-warning">Logout</a>
     </main>
     <footer class="footer">
@@ -75,7 +101,8 @@ $patients = mysqli_fetch_all($result, MYSQLI_ASSOC);
                     .then(data => {
                         if (data.success) {
                             document.getElementById('status-' + patientId).textContent = 'ready';
-                            this.style.display = 'none';
+                            this.closest('tr').remove();
+                            location.reload(); // Reload the page to update tables
                         } else {
                             alert('Failed to change status');
                         }
