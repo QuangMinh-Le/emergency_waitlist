@@ -1,35 +1,16 @@
 <?php
 session_start();
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: admin_signin.html');
-    exit;
+if (!isset($_SESSION["admin"])) {
+   header("Location: admin_signin.html");
+   exit();
 }
 
-// Database connection
-$host = 'localhost';
-$db = 'hospital_triage';
-$user = 'your_db_username';  // replace with your database username
-$pass = 'your_db_password';  // replace with your database password
-
-try {
-    $conn = new PDO("pgsql:host=$host;dbname=$db", $user, $pass);
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    echo "Connection failed: " . $e->getMessage();
-}
-
-// Function to calculate waiting time in minutes
-function calculate_waiting_time($sign_in_time) {
-    $sign_in_datetime = new DateTime($sign_in_time);
-    $current_datetime = new DateTime();
-    $interval = $sign_in_datetime->diff($current_datetime);
-    return $interval->days * 24 * 60 + $interval->h * 60 + $interval->i;
-}
-
-// Retrieve patients sorted by severity (highest first) and sign-in time (earliest first)
-$stmt = $conn->query("SELECT u.username, p.age, p.sign_in_time, p.severity FROM patients p JOIN users u ON p.user_id = u.id ORDER BY p.severity DESC, p.sign_in_time ASC");
-$patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+require_once "database.php";
+$sql = "SELECT * FROM users ORDER BY severity ASC";
+$result = mysqli_query($conn, $sql);
+$patients = mysqli_fetch_all($result, MYSQLI_ASSOC);
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,42 +18,71 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hospital Triage System - Admin Dashboard</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header class="bg-primary text-white text-center py-3">
+    <header>
         <h1>Hospital Triage System - Admin Dashboard</h1>
     </header>
     <main class="container mt-5">
-        <div class="row">
-            <div class="col-md-12">
-                <h2>Patient List</h2>
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Age</th>
-                            <th>Sign-In Time</th>
-                            <th>Severity</th>
-                            <th>Waiting Time (minutes)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($patients as $patient): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($patient['username']) ?></td>
-                                <td><?= htmlspecialchars($patient['age']) ?></td>
-                                <td><?= htmlspecialchars($patient['sign_in_time']) ?></td>
-                                <td><?= htmlspecialchars($patient['severity']) ?></td>
-                                <td><?= calculate_waiting_time($patient['sign_in_time']) ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <h2>Patient List</h2>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Severity</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($patients as $patient): ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($patient['full_name']); ?></td>
+                    <td><?php echo htmlspecialchars($patient['email']); ?></td>
+                    <td><?php echo htmlspecialchars($patient['severity']); ?></td>
+                    <td id="status-<?php echo $patient['id']; ?>"><?php echo htmlspecialchars($patient['status']); ?></td>
+                    <td>
+                        <?php if ($patient['status'] === 'pending'): ?>
+                        <button class="btn btn-success change-status-btn" data-id="<?php echo $patient['id']; ?>">Mark as Ready</button>
+                        <?php else: ?>
+                        <span class="badge badge-success">Ready</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <a href="logout.php" class="btn btn-warning">Logout</a>
     </main>
-    <footer class="text-center mt-5 mb-3">
+    <footer class="footer">
         <p>&copy; 2024 Hospital Triage System</p>
     </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.change-status-btn').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    const patientId = this.getAttribute('data-id');
+                    fetch('change_status.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: 'id=' + encodeURIComponent(patientId)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById('status-' + patientId).textContent = 'ready';
+                            this.style.display = 'none';
+                        } else {
+                            alert('Failed to change status');
+                        }
+                    });
+                });
+            });
+        });
+    </script>
 </body>
 </html>

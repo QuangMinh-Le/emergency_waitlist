@@ -37,27 +37,32 @@
     <footer class="footer">
         <p>&copy; 2024 Hospital Triage System</p>
     </footer>
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
     <script>
-        $(document).ready(function() {
-            $('#admin-signin-form').on('submit', function(e) {
-                e.preventDefault();
-                $.ajax({
-                    type: 'POST',
-                    url: 'admin_signin_process.php',
-                    data: $(this).serialize(),
-                    success: function(response) {
-                        if (response === 'success') {
-                            window.location.href = 'admin_dashboard.php';
-                        } else {
-                            $('#admin-signin-message').text(response).show();
-                        }
-                    },
-                    error: function() {
-                        $('#admin-signin-message').text('An error occurred. Please try again.').show();
+        document.getElementById('admin-signin-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            let username = document.getElementById('admin-username').value;
+            let password = document.getElementById('admin-password').value;
+
+            let xhr = new XMLHttpRequest();
+            xhr.open('POST', 'admin_signin.php', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    let response = JSON.parse(xhr.responseText);
+                    let messageBox = document.getElementById('admin-signin-message');
+                    messageBox.style.display = 'block';
+                    messageBox.className = 'alert alert-' + response.type;
+                    messageBox.innerHTML = response.message;
+                    if (response.type === 'success') {
+                        window.location.href = 'admin_dashboard.php';
                     }
-                });
-            });
+                }
+            };
+
+            xhr.send('username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password));
         });
     </script>
 </body>

@@ -24,6 +24,9 @@ main {
     border: none;
     border-radius: 10px;
 }
+.card-content { 
+    padding: 20px;
+}
 
 .card-body {
     padding: 30px;
@@ -52,7 +55,7 @@ main {
 }
 
 .form-group {
-    margin-bottom: 20px;
+    margin: 20px;
 }
 
 .alert {
